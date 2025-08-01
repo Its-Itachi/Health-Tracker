@@ -1,0 +1,27 @@
+# Bytecode / Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+env/
+venv/
+
+# Local databases & logs
+*.db
+*.sqlite3
+*.log
+
+# Git-related
+.git/
+.gitignore
+
+# VS Code settings
+.vscode/
+
+# Dockerfile itself (optional)
+Dockerfile
+
+# Environment files (optional)
+.env

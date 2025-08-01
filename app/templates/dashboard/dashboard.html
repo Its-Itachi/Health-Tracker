@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Health Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">Welcome to the Health Tracker Dashboard, {{ current_user.username }}!</h2>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Health Data Form -->
+    <div class="card mb-4">
+        <div class="card-header">Log Today’s Health Data</div>
+        <div class="card-body">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+                <div class="row g-3">
+                    <div class="col-md-3">{{ form.glucose.label }} {{ form.glucose(class="form-control") }}</div>
+                    <div class="col-md-3">{{ form.blood_pressure.label }} {{ form.blood_pressure(class="form-control") }}</div>
+                    <div class="col-md-3">{{ form.heart_rate.label }} {{ form.heart_rate(class="form-control") }}</div>
+                    <div class="col-md-3">{{ form.weight.label }} {{ form.weight(class="form-control") }}</div>
+                </div>
+                <div class="mt-3">{{ form.submit(class="btn btn-primary") }}</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table of Last 10 Records -->
+    <div class="card mb-4">
+        <div class="card-header">Recent Entries</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Glucose</th>
+                        <th>Blood Pressure</th>
+                        <th>Heart Rate</th>
+                        <th>Weight</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td>{{ r.timestamp.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ r.glucose }}</td>
+                        <td>{{ r.blood_pressure }}</td>
+                        <td>{{ r.heart_rate }}</td>
+                        <td>{{ r.weight }}</td>
+                        <td>
+                            <a href="{{ url_for('dashboard.delete_entry', entry_id=r['_id']) }}"
+                               class="btn btn-sm btn-danger"
+                               onclick="return confirm('Are you sure you want to delete this entry?');">
+                               Delete
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Line Chart -->
+    <div class="card mb-4">
+        <div class="card-header">Health Trends (Last 10 Entries)</div>
+        <div class="card-body">
+            <canvas id="healthChart" height="100"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Script -->
+<script>
+    const labels = {{ labels | tojson }};
+    const glucose = {{ glucose | tojson }};
+    const bp = {{ bp | tojson }};
+    const heart = {{ heart | tojson }};
+    const weight = {{ weight | tojson }};
+
+    const ctx = document.getElementById('healthChart').getContext('2d');
+    const healthChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Glucose',
+                    data: glucose,
+                    borderColor: 'rgba(255,99,132,1)',
+                    fill: false
+                },
+                {
+                    label: 'Blood Pressure',
+                    data: bp,
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    fill: false
+                },
+                {
+                    label: 'Heart Rate',
+                    data: heart,
+                    borderColor: 'rgba(255, 206, 86, 1)',
+                    fill: false
+                },
+                {
+                    label: 'Weight',
+                    data: weight,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            tension: 0.2,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

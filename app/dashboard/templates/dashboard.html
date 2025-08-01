@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Welcome, {{ current_user.username }}</h2>
+
+<h4>Submit Today's Health Stats</h4>
+<form method="POST">
+  {{ form.hidden_tag() }}
+  <div class="row">
+    <div class="col">{{ form.glucose.label }} {{ form.glucose(class="form-control") }}</div>
+    <div class="col">{{ form.blood_pressure.label }} {{ form.blood_pressure(class="form-control") }}</div>
+    <div class="col">{{ form.heart_rate.label }} {{ form.heart_rate(class="form-control") }}</div>
+    <div class="col">{{ form.weight.label }} {{ form.weight(class="form-control") }}</div>
+  </div><br>
+  {{ form.submit(class="btn btn-primary") }}
+</form>
+
+<hr>
+
+<h4>Health History</h4>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>Glucose</th>
+      <th>BP</th>
+      <th>Heart Rate</th>
+      <th>Weight</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for entry in records %}
+    <tr>
+      <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ entry.glucose }}</td>
+      <td>{{ entry.blood_pressure }}</td>
+      <td>{{ entry.heart_rate }}</td>
+      <td>{{ entry.weight }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<hr>
+
+<h4>📈 Health Trends (Last 10 Records)</h4>
+<canvas id="healthChart" height="100"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const ctx = document.getElementById('healthChart').getContext('2d');
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: {{ labels|tojson }},
+        datasets: [
+            {
+                label: 'Glucose (mg/dL)',
+                data: {{ glucose|tojson }},
+                borderColor: 'rgba(255, 99, 132, 1)',
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                fill: false,
+                tension: 0.3
+            },
+            {
+                label: 'Blood Pressure (mm Hg)',
+                data: {{ bp|tojson }},
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                fill: false,
+                tension: 0.3
+            },
+            {
+                label: 'Heart Rate (bpm)',
+                data: {{ heart|tojson }},
+                borderColor: 'rgba(255, 206, 86, 1)',
+                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                fill: false,
+                tension: 0.3
+            },
+            {
+                label: 'Weight (kg)',
+                data: {{ weight|tojson }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                fill: false,
+                tension: 0.3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            title: {
+                display: true,
+                text: 'Your Recent Health Metrics'
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: false
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,109 +1,202 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Welcome, {{ current_user.username }}</h2>
+<div class="container mt-4">
+  <h2 class="mb-4">Welcome, {{ current_user.username }}</h2>
 
-<h4>Submit Today's Health Stats</h4>
-<form method="POST">
-  {{ form.hidden_tag() }}
-  <div class="row">
-    <div class="col">{{ form.glucose.label }} {{ form.glucose(class="form-control") }}</div>
-    <div class="col">{{ form.blood_pressure.label }} {{ form.blood_pressure(class="form-control") }}</div>
-    <div class="col">{{ form.heart_rate.label }} {{ form.heart_rate(class="form-control") }}</div>
-    <div class="col">{{ form.weight.label }} {{ form.weight(class="form-control") }}</div>
-  </div><br>
-  {{ form.submit(class="btn btn-primary") }}
-</form>
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-<hr>
+  <!-- Health Entry Form -->
+  <div class="card mb-4">
+    <div class="card-header">Log Today's Health Data</div>
+    <div class="card-body">
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+          <div class="col-md-3">
+            {{ form.glucose.label }} (mg/dL)
+            {{ form.glucose(class="form-control", placeholder="e.g. 110") }}
+          </div>
+          <div class="col-md-3">
+            {{ form.blood_pressure.label }} (mm Hg) *
+            {{ form.blood_pressure(class="form-control", placeholder="e.g. 120") }}
+          </div>
+          <div class="col-md-3">
+            {{ form.heart_rate.label }} (bpm) *
+            {{ form.heart_rate(class="form-control", placeholder="e.g. 72") }}
+          </div>
+          <div class="col-md-3">
+            {{ form.weight.label }} (kg) *
+            {{ form.weight(class="form-control", placeholder="e.g. 70") }}
+          </div>
+        </div>
 
-<h4>Health History</h4>
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>Timestamp</th>
-      <th>Glucose</th>
-      <th>BP</th>
-      <th>Heart Rate</th>
-      <th>Weight</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for entry in records %}
-    <tr>
-      <td>{{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-      <td>{{ entry.glucose }}</td>
-      <td>{{ entry.blood_pressure }}</td>
-      <td>{{ entry.heart_rate }}</td>
-      <td>{{ entry.weight }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+        <div class="row g-3 mt-3">
+          <div class="col-md-3">
+            {{ form.height.label }} (cm)
+            {{ form.height(class="form-control", placeholder="e.g. 175") }}
+          </div>
+          <div class="col-md-3">
+            {{ form.sleep.label }} (hrs)
+            {{ form.sleep(class="form-control", placeholder="e.g. 7.5") }}
+          </div>
+          <div class="col-md-3">
+            {{ form.date.label }}
+            {{ form.date(class="form-control") }}
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            {{ form.submit(class="btn btn-primary w-100") }}
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 
-<hr>
+  <!-- Smart Insights -->
+  {% if insights %}
+  <div class="alert alert-info">
+    <strong>🧠 Insights:</strong> {{ insights }}
+  </div>
+  {% endif %}
 
-<h4>📈 Health Trends (Last 10 Records)</h4>
-<canvas id="healthChart" height="100"></canvas>
+  <!-- Streak Info -->
+  {% if streak_days > 1 %}
+    <div class="alert alert-success">
+      🔥 You're on a {{ streak_days }}-day streak! Keep it up!
+    </div>
+  {% endif %}
 
+  <!-- Recent Logs Table -->
+  <div class="card mb-4">
+    <div class="card-header">Recent Entries</div>
+    <div class="card-body table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Glucose</th>
+            <th>BP</th>
+            <th>HR</th>
+            <th>Weight</th>
+            <th>Height</th>
+            <th>BMI</th>
+            <th>Sleep</th>
+            <th>Edit</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td>{{ r.date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ r.glucose or '-' }}</td>
+            <td>{{ r.blood_pressure }}</td>
+            <td>{{ r.heart_rate }}</td>
+            <td>{{ r.weight }}</td>
+            <td>{{ r.height or '-' }}</td>
+            <td>
+              {% if r.bmi %}
+                {{ r.bmi }} ({{ r.bmi_category }})
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ r.sleep or '-' }}</td>
+            <td>
+              <a href="{{ url_for('dashboard.edit_entry', entry_id=r['_id']) }}" class="btn btn-sm btn-warning">Edit</a>
+            </td>
+            <td>
+              <a href="{{ url_for('dashboard.delete_entry', entry_id=r['_id']) }}" class="btn btn-sm btn-danger"
+                 onclick="return confirm('Are you sure you want to delete this entry?');">Delete</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Trend Chart -->
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>📈 Health Trends</span>
+      <form method="get" class="d-flex align-items-center">
+        <label for="days" class="me-2">View:</label>
+        <select name="days" id="days" class="form-select form-select-sm w-auto me-2" onchange="this.form.submit()">
+          <option value="7" {% if trend_days == 7 %}selected{% endif %}>Last 7 Days</option>
+          <option value="30" {% if trend_days == 30 %}selected{% endif %}>Last 30 Days</option>
+        </select>
+      </form>
+    </div>
+    <div class="card-body">
+      <canvas id="healthChart" height="100"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const ctx = document.getElementById('healthChart').getContext('2d');
-const chart = new Chart(ctx, {
+  const ctx = document.getElementById('healthChart').getContext('2d');
+  const healthChart = new Chart(ctx, {
     type: 'line',
     data: {
-        labels: {{ labels|tojson }},
-        datasets: [
-            {
-                label: 'Glucose (mg/dL)',
-                data: {{ glucose|tojson }},
-                borderColor: 'rgba(255, 99, 132, 1)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                fill: false,
-                tension: 0.3
-            },
-            {
-                label: 'Blood Pressure (mm Hg)',
-                data: {{ bp|tojson }},
-                borderColor: 'rgba(54, 162, 235, 1)',
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                fill: false,
-                tension: 0.3
-            },
-            {
-                label: 'Heart Rate (bpm)',
-                data: {{ heart|tojson }},
-                borderColor: 'rgba(255, 206, 86, 1)',
-                backgroundColor: 'rgba(255, 206, 86, 0.2)',
-                fill: false,
-                tension: 0.3
-            },
-            {
-                label: 'Weight (kg)',
-                data: {{ weight|tojson }},
-                borderColor: 'rgba(75, 192, 192, 1)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                fill: false,
-                tension: 0.3
-            }
-        ]
+      labels: {{ labels|tojson }},
+      datasets: [
+        {
+          label: 'Glucose (mg/dL)',
+          data: {{ glucose|tojson }},
+          borderColor: 'rgba(255, 99, 132, 1)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          fill: false,
+          tension: 0.3
+        },
+        {
+          label: 'Blood Pressure (mm Hg)',
+          data: {{ bp|tojson }},
+          borderColor: 'rgba(54, 162, 235, 1)',
+          backgroundColor: 'rgba(54, 162, 235, 0.2)',
+          fill: false,
+          tension: 0.3
+        },
+        {
+          label: 'Heart Rate (bpm)',
+          data: {{ heart|tojson }},
+          borderColor: 'rgba(255, 206, 86, 1)',
+          backgroundColor: 'rgba(255, 206, 86, 0.2)',
+          fill: false,
+          tension: 0.3
+        },
+        {
+          label: 'Weight (kg)',
+          data: {{ weight|tojson }},
+          borderColor: 'rgba(75, 192, 192, 1)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          fill: false,
+          tension: 0.3
+        }
+      ]
     },
     options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'top',
-            },
-            title: {
-                display: true,
-                text: 'Your Recent Health Metrics'
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: false
-            }
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: {
+          beginAtZero: false
         }
+      }
     }
-});
+  });
 </script>
 {% endblock %}

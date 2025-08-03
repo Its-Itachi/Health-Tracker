@@ -1,5 +1,15 @@
+# Virtual environment
 venv/
+
+# Python cache
 __pycache__/
-.env
 *.pyc
+
+# macOS system file
 .DS_Store
+
+# Sensitive files
+.env
+
+# Optional: skip render.yaml if it contains secrets
+render.yaml
